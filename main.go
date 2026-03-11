@@ -16,8 +16,6 @@ func main() {
 
 	feature_postgres.CheckConnection()
 
-	fmt.Println("fadsf")
-
 	if err := httpServer.StartServer(); err != nil {
 		fmt.Println("failed to start server:", err)
 	}
