@@ -6,9 +6,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func CreateTable(ctx context.Context, conn *pgx.Conn) {
+func CreateTable(ctx context.Context, conn *pgx.Conn) error {
 	sqlQuery := `
-		CREATE TABLE subscribes (
+		CREATE TABLE IF NOT EXISTS subscribes (
 			id SERIAL PRIMARY KEY,
 			serviceName VARCHAR(150) NOT NULL,
 			price INT,
@@ -18,5 +18,7 @@ func CreateTable(ctx context.Context, conn *pgx.Conn) {
 		);
 	`
 
-	conn.Exec(ctx, sqlQuery)
+	_, err := conn.Exec(ctx, sqlQuery)
+
+	return err
 }

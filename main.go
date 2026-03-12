@@ -23,7 +23,9 @@ func main() {
 		panic(err)
 	}
 
-	simple_sql.CreateTable(ctx, conn)
+	if err := simple_sql.CreateTable(ctx, conn); err != nil {
+		panic(err)
+	}
 
 	if err := httpServer.StartServer(); err != nil {
 		fmt.Println("failed to start server:", err)

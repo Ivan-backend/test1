@@ -1,9 +1,12 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"main/feature_postgres/simple_connection"
+	"main/feature_postgres/simple_sql"
 	"main/subscribes"
 	"main/users"
 	"net/http"
@@ -71,6 +74,14 @@ func (h *HTTPHandlers) HandleGetUsers(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTPHandlers) HandleCreateNoteSubscribe(w http.ResponseWriter, r *http.Request) {
 	var subscribeDTO SubscribeDTO
+
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&subscribeDTO); err != nil {
 		errDTO := ErrorDTO{
 			Message: err.Error(),
@@ -82,6 +93,11 @@ func (h *HTTPHandlers) HandleCreateNoteSubscribe(w http.ResponseWriter, r *http.
 	}
 
 	subscribe := subscribes.NewSubscribe(subscribeDTO.ServiceName, subscribeDTO.Price, subscribeDTO.UserId, subscribeDTO.DateStart)
+
+	if err := simple_sql.InsertRow(ctx, conn, subscribeDTO.ServiceName, subscribeDTO.Price, subscribeDTO.UserId.String(), subscribeDTO.DateStart, time.Date(2026, time.March, 11, 10, 9, 8, 7, time.UTC)); err != nil {
+		panic(err)
+	}
+
 	if err := h.subscribes.CreateNoteSubscribe(subscribe); err != nil {
 		errDTO := ErrorDTO{
 			Message: err.Error(),
@@ -110,7 +126,17 @@ func (h *HTTPHandlers) HandleCreateNoteSubscribe(w http.ResponseWriter, r *http.
 }
 
 func (h *HTTPHandlers) HandleGetSubscribes(w http.ResponseWriter, r *http.Request) {
-	subscribes := h.subscribes.GetSubscribes()
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	subscribes, err := simple_sql.GetSubscribes(ctx, conn)
+	if err != nil {
+		panic(err)
+	}
+
 	b, err := json.MarshalIndent(subscribes, "", "	")
 	if err != nil {
 		panic(err)
@@ -123,43 +149,77 @@ func (h *HTTPHandlers) HandleGetSubscribes(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *HTTPHandlers) HandleSortServiceNameSubscribe(w http.ResponseWriter, r *http.Request) {
-	// userId := mux.Vars(r)["user-id"]
+func (h *HTTPHandlers) HandleGetByServiceNameSubscribe(w http.ResponseWriter, r *http.Request) {
 	serviceName := mux.Vars(r)["service-name"]
-	// priceAllSubscribes := h.subscribes.PriceAllSubscribes(serviceName, userId)
 
-	sortServiceNameSubscribe, priceAllSubscribes := h.subscribes.SortServiceNameSubscribe(serviceName)
-	// sortServiceNameSubscribe := h.subscribes.SortServiceNameSubscribe(serviceName)
-
-	b, err := json.MarshalIndent(sortServiceNameSubscribe, "", "	")
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	getServiceNameSubscribe, price, err := simple_sql.GetByServiceNameSubscribe(ctx, conn, serviceName)
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(getServiceNameSubscribe, "", "	")
+	if err != nil {
+		panic(err)
+	}
+
 	if _, err := w.Write(b); err != nil {
 		fmt.Println("failed to write http response", err)
 		return
 	}
 
-	p, err := json.Marshal(priceAllSubscribes)
+	fmt.Println(price)
+}
+
+func (h *HTTPHandlers) HandleGetByServiceNameAndDateSubscribe(w http.ResponseWriter, r *http.Request) {
+	serviceName := mux.Vars(r)["service-name"]
+	dateSubscribeStart := mux.Vars(r)["date-subscribe-start"]
+	dateSubscribeEnd := mux.Vars(r)["date-subscribe-end"]
+
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	if _, err := w.Write(p); err != nil {
+	getServiceNameSubscribe, price, err := simple_sql.GetByServiceNameAndDateSubscribe(ctx, conn, serviceName, dateSubscribeStart, dateSubscribeEnd)
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(getServiceNameSubscribe, "", "	")
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := w.Write(b); err != nil {
 		fmt.Println("failed to write http response", err)
 		return
 	}
+
+	fmt.Println(price)
 }
 
-func (h *HTTPHandlers) HandleSortServiceUserIdSubscribe(w http.ResponseWriter, r *http.Request) {
+func (h *HTTPHandlers) HandleGetByUserIdSubscribe(w http.ResponseWriter, r *http.Request) {
 	userId := mux.Vars(r)["user-id"]
-	// serviceName := mux.Vars(r)["service-name"]
-	// priceAllSubscribes := h.subscribes.PriceAllSubscribes(serviceName, userId)
-	SortServiceUserIdSubscribe, priceAllSubscribes := h.subscribes.SortServiceUserIdSubscribe(userId)
 
-	b, err := json.MarshalIndent(SortServiceUserIdSubscribe, "", "	")
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	getByUserIdSubscribe, price, err := simple_sql.GetByUserIdSubscribe(ctx, conn, userId)
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(getByUserIdSubscribe, "", "	")
 	if err != nil {
 		panic(err)
 	}
@@ -170,61 +230,35 @@ func (h *HTTPHandlers) HandleSortServiceUserIdSubscribe(w http.ResponseWriter, r
 		return
 	}
 
-	p, err := json.Marshal(priceAllSubscribes)
+	fmt.Println(price)
+}
+
+func (h *HTTPHandlers) HandleGetByUserIdAndDateSubscribe(w http.ResponseWriter, r *http.Request) {
+	userId := mux.Vars(r)["user-id"]
+	dateSubscribeStart := mux.Vars(r)["date-subscribe-start"]
+	dateSubscribeEnd := mux.Vars(r)["date-subscribe-end"]
+
+	ctx := context.Background()
+	conn, err := simple_connection.CheckConnection(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	if _, err := w.Write(p); err != nil {
+	getByUserIdSubscribe, price, err := simple_sql.GetByUserIdAndDateSubscribe(ctx, conn, userId, dateSubscribeStart, dateSubscribeEnd)
+	if err != nil {
+		panic(err)
+	}
+
+	b, err := json.MarshalIndent(getByUserIdSubscribe, "", "	")
+	if err != nil {
+		panic(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(b); err != nil {
 		fmt.Println("failed to write http response", err)
 		return
 	}
+
+	fmt.Println(price)
 }
-
-// func (h *HTTPHandlers) HandlePriceAllSubscribes(w http.ResponseWriter, r *http.Request) {
-// 	userId := mux.Vars(r)["user-id"]
-// 	serviceName := mux.Vars(r)["service-name"]
-// 	priceAllSubscribes := h.subscribes.PriceAllSubscribes(serviceName, userId)
-
-// 	params := r.URL.Query()
-// 	if params.Get("service-name") != "" {
-// 		sortServiceNameSubscribe := h.subscribes.SortServiceNameSubscribe(serviceName)
-
-// 		b, err := json.MarshalIndent(sortServiceNameSubscribe, "", "	")
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		w.WriteHeader(http.StatusOK)
-// 		if _, err := w.Write(b); err != nil {
-// 			fmt.Println("failed to write http response", err)
-// 			return
-// 		}
-// 	}
-
-// 	if params.Get("user-id") != "" {
-// 		SortServiceUserIdSubscribe := h.subscribes.SortServiceUserIdSubscribe(userId)
-
-// 		b, err := json.MarshalIndent(SortServiceUserIdSubscribe, "", "	  ")
-// 		if err != nil {
-// 			panic(err)
-// 		}
-
-// 		w.WriteHeader(http.StatusOK)
-// 		if _, err := w.Write(b); err != nil {
-// 			fmt.Println("failed to write http response", err)
-// 			return
-// 		}
-// 	}
-
-// 	b, err := json.MarshalIndent(priceAllSubscribes, "", "	")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	w.WriteHeader(http.StatusOK)
-// 	if _, err := w.Write(b); err != nil {
-// 		fmt.Println("failed to write http response", err)
-// 		return
-// 	}
-// }
