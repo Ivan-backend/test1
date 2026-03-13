@@ -94,7 +94,7 @@ func (h *HTTPHandlers) HandleCreateNoteSubscribe(w http.ResponseWriter, r *http.
 
 	subscribe := subscribes.NewSubscribe(subscribeDTO.ServiceName, subscribeDTO.Price, subscribeDTO.UserId, subscribeDTO.DateStart)
 
-	if err := simple_sql.InsertRow(ctx, conn, subscribeDTO.ServiceName, subscribeDTO.Price, subscribeDTO.UserId.String(), subscribeDTO.DateStart, time.Date(2026, time.March, 11, 10, 9, 8, 7, time.UTC)); err != nil {
+	if err := simple_sql.InsertRow(ctx, conn, subscribeDTO.ServiceName, subscribeDTO.Price, subscribeDTO.UserId.String(), subscribeDTO.DateStart, subscribeDTO.DateEnd); err != nil {
 		panic(err)
 	}
 

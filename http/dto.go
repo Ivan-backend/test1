@@ -16,6 +16,7 @@ type SubscribeDTO struct {
 	Price       int
 	UserId      uuid.UUID
 	DateStart   time.Time
+	DateEnd     time.Time
 }
 
 type ErrorDTO struct {
