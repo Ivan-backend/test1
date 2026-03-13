@@ -2,12 +2,14 @@ package simple_connection
 
 import (
 	"context"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 )
 
 func CheckConnection(ctx context.Context) (*pgx.Conn, error) {
-	return pgx.Connect(ctx, "postgres://postgres:pass@localhost:5432/subscribes")
+	connString := os.Getenv("CONN_STRING")
+	return pgx.Connect(ctx, connString)
 }
 
 func CreateConnection(ctx context.Context) {
